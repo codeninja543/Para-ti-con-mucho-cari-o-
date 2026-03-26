@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Galaxy de Amor</title>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { overflow: hidden; height: 100%; background: black; }
+  .webgl { position: fixed; top: 0; left: 0; outline: none; }
+
+  #inicio {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: radial-gradient(ellipse at center, #1a0030 0%, #000010 70%, #000 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 28px;
+    z-index: 999;
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  #inicio::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(circle, #fff 1px, transparent 1px),
+      radial-gradient(circle, #ffd6e7 1px, transparent 1px),
+      radial-gradient(circle, #c8b6ff 1px, transparent 1px);
+    background-size: 200px 200px, 150px 150px, 300px 300px;
+    background-position: 20px 20px, 80px 60px, 10px 100px;
+    opacity: 0.5;
+    animation: twinkle 3s ease-in-out infinite alternate;
+  }
+
+  @keyframes twinkle {
+    0% { opacity: 0.3; }
+    100% { opacity: 0.65; }
+  }
+
+  #foto-inicio {
+    width: 220px;
+    height: 220px;
+    border-radius: 16px;
+    object-fit: cover;
+    border: 4px solid #ff1493;
+    box-shadow: 0 0 30px #ff1493, 0 0 60px #9400d3, 0 0 100px #ff149366;
+    animation: pulsePhoto 2.5s ease-in-out infinite;
+    position: relative;
+    z-index: 2;
+  }
+
+  @keyframes pulsePhoto {
+    0%, 100% { box-shadow: 0 0 30px #ff1493, 0 0 60px #9400d3; transform: scale(1); }
+    50% { box-shadow: 0 0 50px #ff69b4, 0 0 100px #bf00ff, 0 0 140px #ff149344; transform: scale(1.04); }
+  }
+
+  #frase-inicio {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.5em;
+    color: #fff;
+    text-align: center;
+    text-shadow: 0 0 20px #ff69b4, 0 0 40px #ff1493;
+    max-width: 75%;
+    line-height: 1.4;
+    animation: fadeGlow 2s ease-in-out infinite alternate;
+    position: relative;
+    z-index: 2;
+  }
+
+  @keyframes fadeGlow {
+    0% { text-shadow: 0 0 15px #ff69b4, 0 0 30px #ff1493; }
+    100% { text-shadow: 0 0 30px #ff69b4, 0 0 60px #ff1493, 0 0 80px #bf00ff; }
+  }
+
+  #btn-inicio {
+    font-family: 'Pacifico', cursive;
+    font-size: 1.3em;
+    color: #fff;
+    background: linear-gradient(135deg, #ff1493, #9400d3);
+    padding: 16px 48px;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 0 20px #ff1493, 0 0 40px #9400d380;
+    animation: btnPulse 1.8s ease-in-out infinite;
+    transition: transform 0.2s;
+    letter-spacing: 1px;
+  }
+
+  #btn-inicio:hover { transform: scale(1.07); }
+
+  @keyframes btnPulse {
+    0%, 100% { box-shadow: 0 0 20px #ff1493, 0 0 40px #9400d380; }
+    50% { box-shadow: 0 0 35px #ff69b4, 0 0 70px #bf00ff; }
+  }
+
+  .corazon-deco {
+    position: absolute;
+    font-size: 1.5em;
+    animation: floatHeart 6s ease-in-out infinite;
+    opacity: 0.6;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  @keyframes floatHeart {
+    0% { transform: translateY(0) scale(1); opacity: 0.4; }
+    50% { transform: translateY(-30px) scale(1.2); opacity: 0.8; }
+    100% { transform: translateY(0) scale(1); opacity: 0.4; }
+  }
+
+  #inicio.salir {
+    animation: fadeOut 1s forwards;
+  }
+  @keyframes fadeOut {
+    0% { opacity: 1; }
+    100% { opacity: 0; pointer-events: none; }
+  }
+</style>
+</head>
+<body>
+<canvas class="webgl"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+
+<script>
+const scene = new THREE.Scene();
+
+function crearEstrellasFondo() {
+    const starGeometry = new THREE.BufferGeometry();
+    const starCount = 5000;
+    const positions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount * 3; i++) {
+        positions[i] = (Math.random() - 0.5) * 500;
+    }
+    starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.7, transparent: true });
+    const stars = new THREE.Points(starGeometry, starMaterial);
+    scene.add(stars);
+}
+crearEstrellasFondo();
+
+let galaxy;
+const parameters = {
+    count: 80000, size: 0.01, radius: 6,
+    branches: 4, spin: 1, randomness: 0.2,
+    randomnessPower: 3,
+    insideColor: "#ff1b6b", outsideColor: "#3000ff"
+};
+
+function generateGalaxy() {
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(parameters.count * 3);
+    const colors = new Float32Array(parameters.count * 3);
+    const colorInside = new THREE.Color(parameters.insideColor);
+    const colorOutside = new THREE.Color(parameters.outsideColor);
+    for (let i = 0; i < parameters.count; i++) {
+        const i3 = i * 3;
+        const radius = Math.random() * parameters.radius;
+        const spinAngle = radius * parameters.spin;
+        const branchAngle = ((i % parameters.branches) / parameters.branches) * Math.PI * 2;
+        const randomX = (Math.random() - 0.5) * parameters.randomness * radius;
+        const randomY = (Math.random() - 0.5) * parameters.randomness * radius;
+        const randomZ = (Math.random() - 0.5) * parameters.randomness * radius;
+        positions[i3]     = Math.cos(branchAngle + spinAngle) * radius + randomX;
+        positions[i3 + 1] = randomY;
+        positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ;
+        const mixed = colorInside.clone().lerp(colorOutside, radius / parameters.radius);
+        colors[i3] = mixed.r; colors[i3+1] = mixed.g; colors[i3+2] = mixed.b;
+    }
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    const material = new THREE.PointsMaterial({
+        size: parameters.size, vertexColors: true,
+        blending: THREE.AdditiveBlending, depthWrite: false
+    });
+    galaxy = new THREE.Points(geometry, material);
+    scene.add(galaxy);
+}
+generateGalaxy();
+
+const heartGeometry = new THREE.BufferGeometry();
+const hPos = [], hCol = [];
+for (let i = 0; i < 3500; i++) {
+    const t = Math.random() * Math.PI * 2;
+    const s = Math.random() * 0.6 + 0.4;
+    let x = 17 * Math.pow(Math.sin(t), 3);
+    let y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+    let z = (Math.random() - 0.5) * 1;
+    x *= s * 0.15; y *= s * 0.15; z *= s * 0.15;
+    hPos.push(x, y + 2.2, z);
+    let c = new THREE.Color();
+    c.setHSL(0.95 + Math.random() * 0.05, 1, 0.65);
+    hCol.push(c.r, c.g, c.b);
+}
+heartGeometry.setAttribute("position", new THREE.Float32BufferAttribute(hPos, 3));
+heartGeometry.setAttribute("color", new THREE.Float32BufferAttribute(hCol, 3));
+const heartMaterial = new THREE.PointsMaterial({ size: 0.12, vertexColors: true });
+const heart = new THREE.Points(heartGeometry, heartMaterial);
+scene.add(heart);
+
+const frases = [
+  "Eres arte",
+  "Te quiero",
+  "Eres mi todo",
+  "Mi cielo",
+  "guerrera",
+  "Te adoro",
+  "Te extraño",
+  "Mi reina",
+  "Mi universo",
+  "Preciosa",
+  "Bella",
+  "Princesa",
+  "Guapa",
+  "Niña bonita",
+  "Me encantas",
+  "Mi vida",
+  "Te elijo",
+  "Eres perfecta",
+  "Mi todo",
+  "Te admiro"
+];
+
+function crearTexto(msg, size=1.8) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 128;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = "bold 52px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+   
+    ctx.shadowColor = "#000";
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(msg, canvas.width / 2, canvas.height / 2);
+   
+    ctx.shadowColor = "#ff1493";
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = "#ff69b4";
+    ctx.fillText(msg, canvas.width / 2, canvas.height / 2);
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(size * 4.5, size * 1.1, 1);
+    return sprite;
+}
+
+let textoSprites = [];
+
+const totalFrases = 60;
+for (let i = 0; i < totalFrases; i++) {
+    let t = crearTexto(frases[i % frases.length], 1.0 + Math.random() * 0.4);
+
+    const angle = (i / totalFrases) * Math.PI * 2 + Math.random() * 0.3;
+    const dist = 10 + (i % 3) * 6; 
+    const x = Math.cos(angle) * dist;
+    const z = Math.sin(angle) * dist;
+    const y = (Math.random() - 0.5) * 18;
+
+    t.position.set(x, y, z);
+    scene.add(t);
+    textoSprites.push(t);
+}
+
+const loader = new THREE.TextureLoader();
+const urls = [
+  "https://i.postimg.cc/6QTKhFWc/IMG-20260325-WA0012.jpg",
+  "https://i.postimg.cc/MGXwYg60/IMG-20260325-WA0013.jpg",
+  "https://i.postimg.cc/BnmsHJ05/IMG-20260325-WA0014.jpg",
+  "https://i.postimg.cc/L8xRLmpD/IMG-20260325-WA0015.jpg",
+  "https://i.postimg.cc/NjdYmQc1/IMG-20260325-WA0016.jpg",
+  "https://i.postimg.cc/g2gd8GWX/IMG-20260325-WA0017.jpg",
+  "https://i.postimg.cc/C1SbnCHc/IMG-20260325-WA0015.jpg"
+];
+
+let fotoSprites = [];
+
+for (let i = 0; i < 18; i++) {
+    const texture = loader.load(urls[i % urls.length]);
+    const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    const sprite = new THREE.Sprite(material);
+
+    const scale = 2.2 + Math.random() * 0.8;
+    sprite.scale.set(scale, scale, 1);
+
+    const anillo = i < 9 ? 18 : 28;
+    const angle = (i % 9) / 9 * Math.PI * 2;
+    const x = Math.cos(angle) * anillo;
+    const z = Math.sin(angle) * anillo;
+    const y = (i % 3 - 1) * 5; // -5, 0, 5
+
+    sprite.position.set(x, y, z);
+    scene.add(sprite);
+    fotoSprites.push(sprite);
+}
+
+const sizes = { width: window.innerWidth, height: window.innerHeight };
+const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 600);
+camera.position.set(0, 20, 55); 
+scene.add(camera);
+
+const canvasEl = document.querySelector('.webgl');
+const renderer = new THREE.WebGLRenderer({ canvas: canvasEl, antialias: true });
+renderer.setSize(sizes.width, sizes.height);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.target.set(0, 2, 0);
+
+const targetPos = new THREE.Vector3(14, 14, 28);
+let zooming = false;
+let zoomProgress = 0;
+
+function startZoom() {
+  zooming = true;
+  zoomProgress = 0;
+}
+
+function tick() {
+  galaxy.rotation.y += 0.001;
+  heart.rotation.y += 0.003;
+  textoSprites.forEach(t => t.lookAt(camera.position));
+  fotoSprites.forEach(f => f.lookAt(camera.position));
+
+  if (zooming) {
+    zoomProgress += 0.012;
+    const t = Math.min(zoomProgress, 1);
+    const ease = 1 - Math.pow(1 - t, 3);
+    camera.position.lerpVectors(new THREE.Vector3(0, 20, 55), targetPos, ease);
+    if (t >= 1) zooming = false;
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+tick();
+
+window.addEventListener('resize', () => {
+  sizes.width = window.innerWidth;
+  sizes.height = window.innerHeight;
+  camera.aspect = sizes.width / sizes.height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(sizes.width, sizes.height);
+});
+</script>
+
+<audio id="musica-fondo" loop>
+    <source src="https://github.com/codeninja543/codeninja5433/raw/refs/heads/main/Confieso%20-%20Humbe%20%20Letra..mp3" type="audio/mpeg">
+</audio>
+
+<div id="inicio">
+
+  <span class="corazon-deco" style="top:8%;left:7%;animation-delay:0s;">💖</span>
+  <span class="corazon-deco" style="top:12%;right:9%;animation-delay:0.8s;">💗</span>
+  <span class="corazon-deco" style="bottom:15%;left:5%;animation-delay:1.4s;">💖</span>
+  <span class="corazon-deco" style="bottom:10%;right:6%;animation-delay:0.4s;">💕</span>
+  <span class="corazon-deco" style="top:40%;left:3%;animation-delay:2s;">💗</span>
+  <span class="corazon-deco" style="top:40%;right:3%;animation-delay:1.2s;">💖</span>
+  <span class="corazon-deco" style="top:65%;left:12%;animation-delay:0.6s;">💕</span>
+  <span class="corazon-deco" style="top:25%;right:13%;animation-delay:1.8s;">💗</span>
+
+  <img
+    id="foto-inicio"
+    src="https://i.postimg.cc/6QTKhFWc/IMG-20260325-WA0012.jpg"
+    alt="Foto amor"
+  />
+
+  <p id="frase-inicio">Eres mi mejor casualidad</p>
+
+  <button id="btn-inicio">Toca Aqui</button>
+
+</div>
+
+<script>
+    const musica = document.getElementById("musica-fondo");
+    const inicio = document.getElementById("inicio");
+    const btnInicio = document.getElementById("btn-inicio");
+
+    function arrancar() {
+      inicio.classList.add("salir");
+      musica.play().catch(() => {});
+      setTimeout(() => { inicio.style.display = "none"; }, 1000);
+      startZoom();
+    }
+
+    btnInicio.addEventListener("click", (e) => {
+      e.stopPropagation();
+      arrancar();
+    });
+
+    inicio.addEventListener("click", arrancar);
+</script>
+</body>
+</html>
